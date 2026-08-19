@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en" data-i18n-title="sessions.title">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Login sessions</title>
+  <style>
+    :root {
+      --primary-color: #03a9f4;
+      --primary-background-color: #fafafa;
+      --card-background-color: #ffffff;
+      --primary-text-color: #212121;
+      --secondary-text-color: #727272;
+      --divider-color: #e0e0e0;
+      --error-color: #db4437;
+      --success-color: #43a047;
+      --warning-color: #f57c00;
+      font-family: "Roboto", "Noto", -apple-system, BlinkMacSystemFont,
+        "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary-background-color: #111111;
+        --card-background-color: #1c1c1c;
+        --primary-text-color: #e1e1e1;
+        --secondary-text-color: #9b9b9b;
+        --divider-color: #333333;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--primary-background-color);
+      color: var(--primary-text-color);
+      min-height: 100vh;
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .wrap { max-width: 1000px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    h1 { font-size: 20px; font-weight: 400; flex: 1; }
+
+    .status-pill {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background-color: rgba(67, 160, 71, 0.15);
+      color: var(--success-color);
+      font-weight: 500;
+    }
+
+    .status-pill.off {
+      background-color: rgba(219, 68, 55, 0.15);
+      color: var(--error-color);
+    }
+
+    .card {
+      background-color: var(--card-background-color);
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      overflow: hidden;
+    }
+
+    .session {
+      padding: 16px;
+      border-bottom: 1px solid var(--divider-color);
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .session:last-child { border-bottom: none; }
+
+    .session-main { flex: 1; min-width: 220px; }
+
+    .session-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background-color: rgba(3, 169, 244, 0.12);
+      color: var(--primary-color);
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .badge.warn {
+      background-color: rgba(245, 124, 0, 0.15);
+      color: var(--warning-color);
+    }
+
+    dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 2px 12px;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    dt { color: var(--secondary-text-color); }
+    dd { word-break: break-all; }
+
+    .countdown {
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+    }
+
+    .countdown.low { color: var(--error-color); }
+
+    .btn {
+      padding: 10px 18px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      background-color: transparent;
+      color: var(--error-color);
+      border: 1px solid var(--error-color);
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) { background-color: rgba(219, 68, 55, 0.1); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .empty, .message {
+      padding: 32px 16px;
+      text-align: center;
+      color: var(--secondary-text-color);
+    }
+
+    .message.error { color: var(--error-color); }
+
+    footer {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--secondary-text-color);
+      text-align: right;
+      min-height: 18px;
+    }
+
+    h2 {
+      font-size: 15px;
+      font-weight: 500;
+      margin: 24px 0 8px;
+      color: var(--secondary-text-color);
+    }
+
+    .history-row {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--divider-color);
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+      flex-wrap: wrap;
+      font-size: 13px;
+    }
+
+    .history-row:last-child { border-bottom: none; }
+
+    .outcome {
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .outcome.approved { color: var(--success-color); }
+    .outcome.denied,
+    .outcome.cancelled,
+    .outcome.error { color: var(--error-color); }
+    .outcome.expired { color: var(--secondary-text-color); }
+
+    .history-main { flex: 1; min-width: 200px; word-break: break-word; }
+    .history-when { color: var(--secondary-text-color); white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1 data-i18n="sessions.heading">QR Login sessions</h1>
+      <span class="status-pill" id="statusPill" hidden></span>
+    </header>
+    <div class="card" id="card">
+      <p class="message" id="message" data-i18n="sessions.loading">Loading...</p>
+    </div>
+
+    <section id="historySection" hidden>
+      <h2 data-i18n="sessions.recent">Recent requests</h2>
+      <div class="card" id="historyCard"></div>
+    </section>
+
+    <footer id="footer"></footer>
+  </div>
+
+  <script src="/qr_login/static/i18n.js"></script>
+  <script>
+    const t = window.QRLoginI18n.t;
+    const API_BASE = '/api/qr_login';
+    const TOKENS_KEY = 'hassTokens';
+    const REFRESH_MS = 5000;
+
+    function channelLabel(channel) {
+      const key = `channel.${channel}`;
+      const text = t(key);
+      return text === key ? channel : text;
+    }
+
+    let authToken = null;
+    let refreshToken = null;
+    let clientId = null;
+    let timer = null;
+    let halted = false;
+
+    function loadTokens() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(TOKENS_KEY));
+        if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return null;
+        if (!stored.access_token) return null;
+        return stored;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    async function refreshAccessToken() {
+      if (!refreshToken || !clientId) return null;
+      try {
+        const resp = await fetch('/auth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+            client_id: clientId
+          }).toString()
+        });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        return data.access_token || null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    async function api(path, options = {}) {
+      const call = () => fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers: { ...(options.headers || {}), 'Authorization': `Bearer ${authToken}` }
+      });
+
+      let resp = await call();
+      if (resp.status === 401) {
+        const fresh = await refreshAccessToken();
+        if (fresh) {
+          authToken = fresh;
+          resp = await call();
+        }
+      }
+      return resp;
+    }
+
+    function showMessage(text, isError) {
+      const card = document.getElementById('card');
+      const p = document.createElement('p');
+      p.className = isError ? 'message error' : 'message';
+      p.textContent = text;
+      card.replaceChildren(p);
+    }
+
+    function row(label, value) {
+      const dt = document.createElement('dt');
+      dt.textContent = label;
+      const dd = document.createElement('dd');
+      dd.textContent = value;
+      return [dt, dd];
+    }
+
+    function renderSession(session) {
+      const el = document.createElement('div');
+      el.className = 'session';
+
+      const main = document.createElement('div');
+      main.className = 'session-main';
+
+      const title = document.createElement('div');
+      title.className = 'session-title';
+      title.textContent = session.target_user_name || session.target_user
+        || t('sessions.approver_account');
+
+      const badge = document.createElement('span');
+      if (session.target_from_mapping) {
+        badge.className = 'badge';
+        badge.textContent = t('sessions.badge_mapped');
+      } else {
+        badge.className = 'badge warn';
+        badge.textContent = t('sessions.badge_unmapped');
+      }
+      title.appendChild(badge);
+      main.appendChild(title);
+
+      const dl = document.createElement('dl');
+      const entries = [
+        [t('sessions.requested_username'), session.username || t('sessions.username_empty')],
+        [t('sessions.channel'), channelLabel(session.channel) || '-'],
+        [t('sessions.ip'), session.client_ip || '-'],
+        [t('sessions.user_agent'), session.user_agent || '-'],
+        [t('sessions.requested'), formatAge(session.age)]
+      ];
+      entries.forEach(([k, v]) => dl.append(...row(k, v)));
+
+      const dt = document.createElement('dt');
+      dt.textContent = t('sessions.expires');
+      const dd = document.createElement('dd');
+      dd.className = 'countdown' + (session.expires_in <= 30 ? ' low' : '');
+      dd.textContent = t('time.seconds_short', { n: session.expires_in });
+      dl.append(dt, dd);
+
+      main.appendChild(dl);
+      el.appendChild(main);
+
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.textContent = t('sessions.cancel');
+      btn.addEventListener('click', () => cancelSession(session.session_id, btn));
+      el.appendChild(btn);
+
+      return el;
+    }
+
+    async function cancelSession(sessionId, btn) {
+      stop();
+      btn.disabled = true;
+      btn.textContent = t('sessions.cancelling');
+
+      try {
+        const resp = await api(`/sessions/${encodeURIComponent(sessionId)}`, {
+          method: 'DELETE'
+        });
+        if (!resp.ok) {
+          btn.disabled = false;
+          btn.textContent = t('sessions.cancel');
+          showToast(resp.status === 403
+            ? t('sessions.admin_required')
+            : t('sessions.cancel_failed', { status: resp.status }));
+          start();
+          return;
+        }
+        showToast(t('sessions.cancelled'));
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = t('sessions.cancel');
+        showToast(t('sessions.cancel_connection'));
+        start();
+        return;
+      }
+
+      await load();
+      start();
+    }
+
+    function showToast(text) {
+      const footer = document.getElementById('footer');
+      footer.textContent = text;
+      setTimeout(() => { footer.textContent = ''; }, 4000);
+    }
+
+    function outcomeLabel(outcome) {
+      const key = `outcome.${outcome}`;
+      const text = t(key);
+      return text === key ? outcome : text;
+    }
+
+    function formatAge(seconds) {
+      if (seconds < 60) return t('time.seconds', { n: seconds });
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return t('time.minutes', { n: minutes });
+      return t('time.hours', { n: Math.floor(minutes / 60) });
+    }
+
+    function renderHistory(entry) {
+      const el = document.createElement('div');
+      el.className = 'history-row';
+
+      const outcome = document.createElement('span');
+      outcome.className = `outcome ${entry.outcome}`;
+      outcome.textContent = outcomeLabel(entry.outcome);
+
+      const main = document.createElement('span');
+      main.className = 'history-main';
+      const who = entry.target_user_name || entry.target_user
+        || t('sessions.whoever_approves');
+      const label = entry.username
+        ? `${entry.username} → ${who}`
+        : who + t('sessions.suffix_unmapped');
+      main.textContent = entry.decided_by
+        ? `${label} · ${entry.decided_by}`
+        : label;
+
+      const when = document.createElement('span');
+      when.className = 'history-when';
+      when.textContent = formatAge(entry.age);
+
+      el.append(outcome, main, when);
+      return el;
+    }
+
+    function render(payload) {
+      const card = document.getElementById('card');
+      const pill = document.getElementById('statusPill');
+
+      pill.hidden = false;
+      pill.textContent = payload.enabled ? t('sessions.enabled') : t('sessions.disabled');
+      pill.className = payload.enabled ? 'status-pill' : 'status-pill off';
+
+      if (!payload.sessions.length) {
+        const p = document.createElement('p');
+        p.className = 'empty';
+        p.textContent = t('sessions.empty');
+        card.replaceChildren(p);
+      } else {
+        card.replaceChildren(...payload.sessions.map(renderSession));
+      }
+
+      const history = payload.history || [];
+      const section = document.getElementById('historySection');
+      section.hidden = !history.length;
+      if (history.length) {
+        document.getElementById('historyCard')
+          .replaceChildren(...history.map(renderHistory));
+      }
+    }
+
+    async function load() {
+      if (!authToken) return;
+      try {
+        const resp = await api('/sessions');
+        if (resp.status === 403) {
+          halted = true;
+          stop();
+          showMessage(t('sessions.admin_only'), true);
+          return;
+        }
+        if (!resp.ok) {
+          showMessage(t('sessions.read_failed'), true);
+          return;
+        }
+        render(await resp.json());
+      } catch (err) {
+        showMessage(t('sessions.retrying'), true);
+      }
+    }
+
+    function stop() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    }
+
+    function start() {
+      if (!timer && !halted) {
+        timer = setInterval(load, REFRESH_MS);
+      }
+    }
+
+    function init() {
+      window.QRLoginI18n.apply();
+
+      const tokens = loadTokens();
+      if (!tokens) {
+        showMessage(t('sessions.no_tokens'), true);
+        return;
+      }
+
+      authToken = tokens.access_token;
+      refreshToken = tokens.refresh_token || null;
+      clientId = tokens.clientId || null;
+
+      load();
+      start();
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "QR Login",
+        "description": "Attiva il componente QR Login.",
+        "data": {
+          "default_channel": "Canale di approvazione predefinito"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "QR Login supporta una sola configurazione."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "QR Login",
+        "menu_options": {
+          "main": "Configurazione principale",
+          "mappings": "Mapping utente"
+        }
+      },
+      "main": {
+        "title": "Configurazione principale",
+        "description": "Imposta canali abilitati, reCAPTCHA e rate limit.",
+        "sections": {
+          "channels": {
+            "name": "Canali",
+            "description": "Canali di approvazione disponibili nella pagina di login.",
+            "data": {
+              "enabled_channels": "Canali abilitati",
+              "default_channel": "Canale di approvazione predefinito"
+            }
+          },
+          "recaptcha": {
+            "name": "reCAPTCHA v3",
+            "description": "Facoltativo ma raccomandato: verifica server-side prima di generare la sessione.",
+            "data": {
+              "recaptcha_site_key": "Chiave del sito reCAPTCHA",
+              "recaptcha_secret_key": "Chiave segreta reCAPTCHA",
+              "recaptcha_threshold": "Soglia reCAPTCHA"
+            }
+          },
+          "rate_limiting": {
+            "name": "Rate limiting",
+            "description": "Limiti sulle richieste di accesso per proteggere l'endpoint pubblico.",
+            "data": {
+              "rate_limit_ip": "Tentativi massimi per indirizzo IP",
+              "rate_limit_ip_window": "Finestra dei tentativi per IP (secondi)",
+              "rate_limit_global": "Tentativi massimi globali",
+              "rate_limit_global_window": "Finestra dei tentativi globali (secondi)"
+            }
+          },
+          "notifications": {
+            "name": "Notifiche e sessione",
+            "description": "Cooldown tra notifiche push e durata delle sessioni QR in attesa.",
+            "data": {
+              "notification_cooldown": "Cooldown tra notifiche (secondi)",
+              "session_timeout": "Timeout sessione (secondi)"
+            }
+          }
+        }
+      },
+      "mappings": {
+        "title": "Mapping utente",
+        "description": "Mapping configurati: {count}. Scegli un mapping per modificarlo o eliminarlo, oppure premi 'Termina e salva' per chiudere.",
+        "data": {
+          "mapping": "Azione"
+        }
+      },
+      "add_mapping": {
+        "title": "Aggiungi mapping",
+        "data": {
+          "username": "Username richiedibile",
+          "target_user": "Account Home Assistant per il token",
+          "notify_target": "Dispositivo approvatore",
+          "channel": "Canale"
+        }
+      },
+      "edit_mapping": {
+        "title": "Modifica mapping",
+        "data": {
+          "username": "Username richiedibile",
+          "target_user": "Account Home Assistant per il token",
+          "notify_target": "Dispositivo approvatore",
+          "channel": "Canale",
+          "delete": "Elimina questo mapping"
+        },
+        "data_description": {
+          "delete": "Se selezionato, il mapping viene eliminato al salvataggio e le altre modifiche vengono ignorate."
+        }
+      }
+    },
+    "error": {
+      "already_exists": "Questo username è già stato mappato.",
+      "required": "Questo campo è obbligatorio.",
+      "reserved": "Questo username è riservato, scegline un altro.",
+      "at_least_one": "Seleziona almeno un canale.",
+      "recaptcha_incomplete": "Imposta sia la chiave del sito sia la chiave segreta reCAPTCHA, oppure nessuna delle due."
+    }
+  },
+  "selector": {
+    "channel": {
+      "options": {
+        "qr": "QR code",
+        "notify": "Notifica push"
+      }
+    }
+  }
+}

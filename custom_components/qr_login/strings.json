@@ -1,0 +1,112 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "QR Login",
+        "description": "Set up the QR Login component.",
+        "data": {
+          "default_channel": "Default approval channel"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "QR Login only supports a single configuration."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "QR Login",
+        "menu_options": {
+          "main": "Main configuration",
+          "mappings": "User mapping"
+        }
+      },
+      "main": {
+        "title": "Main configuration",
+        "description": "Set enabled channels, reCAPTCHA and rate limits.",
+        "sections": {
+          "channels": {
+            "name": "Channels",
+            "description": "Approval channels available on the login page.",
+            "data": {
+              "enabled_channels": "Enabled channels",
+              "default_channel": "Default approval channel"
+            }
+          },
+          "recaptcha": {
+            "name": "reCAPTCHA v3",
+            "description": "Optional but recommended: verified server-side before a session is created.",
+            "data": {
+              "recaptcha_site_key": "reCAPTCHA site key",
+              "recaptcha_secret_key": "reCAPTCHA secret key",
+              "recaptcha_threshold": "reCAPTCHA threshold"
+            }
+          },
+          "rate_limiting": {
+            "name": "Rate limiting",
+            "description": "Limits on login requests to protect the public endpoint.",
+            "data": {
+              "rate_limit_ip": "Max attempts per IP address",
+              "rate_limit_ip_window": "Per-IP attempt window (seconds)",
+              "rate_limit_global": "Max global attempts",
+              "rate_limit_global_window": "Global attempt window (seconds)"
+            }
+          },
+          "notifications": {
+            "name": "Notifications & session",
+            "description": "Cooldown between push notifications and how long pending QR sessions live.",
+            "data": {
+              "notification_cooldown": "Cooldown between notifications (seconds)",
+              "session_timeout": "Session timeout (seconds)"
+            }
+          }
+        }
+      },
+      "mappings": {
+        "title": "User mapping",
+        "description": "Configured mappings: {count}. Pick a mapping to edit or delete it, or press 'Finish and save' to close.",
+        "data": {
+          "mapping": "Action"
+        }
+      },
+      "add_mapping": {
+        "title": "Add mapping",
+        "data": {
+          "username": "Requestable username",
+          "target_user": "Home Assistant account for the token",
+          "notify_target": "Approving device",
+          "channel": "Channel"
+        }
+      },
+      "edit_mapping": {
+        "title": "Edit mapping",
+        "data": {
+          "username": "Requestable username",
+          "target_user": "Home Assistant account for the token",
+          "notify_target": "Approving device",
+          "channel": "Channel",
+          "delete": "Delete this mapping"
+        },
+        "data_description": {
+          "delete": "If ticked, the mapping is deleted on save and the other changes are ignored."
+        }
+      }
+    },
+    "error": {
+      "already_exists": "This username has already been mapped.",
+      "required": "This field is required.",
+      "reserved": "This username is reserved, pick another one.",
+      "at_least_one": "Select at least one channel.",
+      "recaptcha_incomplete": "Set both the reCAPTCHA site key and secret key, or neither."
+    }
+  },
+  "selector": {
+    "channel": {
+      "options": {
+        "qr": "QR code",
+        "notify": "Push notification"
+      }
+    }
+  }
+}

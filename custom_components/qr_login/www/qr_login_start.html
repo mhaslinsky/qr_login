@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en" data-i18n-title="start.title">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Login - Home Assistant</title>
+  <style>
+    :root {
+      --primary-color: #03a9f4;
+      --primary-background-color: #fafafa;
+      --card-background-color: #ffffff;
+      --primary-text-color: #212121;
+      --secondary-text-color: #727272;
+      --divider-color: #e0e0e0;
+      --error-color: #db4437;
+      --success-color: #43a047;
+      font-family: "Roboto", "Noto", -apple-system, BlinkMacSystemFont,
+        "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary-background-color: #111111;
+        --card-background-color: #1c1c1c;
+        --primary-text-color: #e1e1e1;
+        --secondary-text-color: #9b9b9b;
+        --divider-color: #333333;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--primary-background-color);
+      color: var(--primary-text-color);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .card {
+      background-color: var(--card-background-color);
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      padding: 32px 24px;
+      width: 100%;
+      max-width: 400px;
+      transition: opacity 0.2s ease;
+    }
+
+    .card.hidden {
+      display: none;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .logo svg {
+      width: 48px;
+      height: 48px;
+      color: var(--primary-color);
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 400;
+      text-align: center;
+      margin-bottom: 8px;
+      color: var(--primary-text-color);
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--secondary-text-color);
+      margin-bottom: 32px;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: var(--secondary-text-color);
+      font-weight: 500;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--divider-color);
+      border-radius: 4px;
+      background-color: var(--card-background-color);
+      color: var(--primary-text-color);
+      font-size: 16px;
+      font-family: inherit;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(3, 169, 244, 0.2);
+    }
+
+    input[type="text"]::placeholder {
+      color: var(--secondary-text-color);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background-color 0.2s ease, opacity 0.2s ease;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: #0288d1;
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      color: var(--error-color);
+      border: 1px solid var(--error-color);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background-color: rgba(219, 68, 55, 0.1);
+    }
+
+    .qr-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 24px 0;
+    }
+
+    .qr-container img,
+    .qr-container canvas {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    .qr-instruction {
+      text-align: center;
+      color: var(--secondary-text-color);
+      font-size: 13px;
+      margin-top: 16px;
+    }
+
+    .spinner {
+      display: block;
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--divider-color);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 24px auto 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .waiting-text {
+      text-align: center;
+      color: var(--secondary-text-color);
+      font-size: 14px;
+    }
+
+    .error-message {
+      text-align: center;
+      color: var(--error-color);
+      margin-top: 16px;
+      padding: 12px;
+      background-color: rgba(219, 68, 55, 0.1);
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .success-message {
+      text-align: center;
+      color: var(--success-color);
+      margin-top: 16px;
+      padding: 12px;
+      background-color: rgba(67, 160, 71, 0.1);
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .channel-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--divider-color);
+      padding-bottom: 8px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      background: none;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--secondary-text-color);
+      cursor: pointer;
+      transition: color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      background-color: var(--divider-color);
+      color: var(--primary-text-color);
+    }
+
+    .tab-btn.active {
+      color: var(--primary-color);
+      background-color: rgba(3, 169, 244, 0.1);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .deep-link-notice {
+      text-align: center;
+      font-size: 12px;
+      color: var(--secondary-text-color);
+      margin-top: 12px;
+      padding: 12px;
+      background-color: var(--divider-color);
+      border-radius: 4px;
+    }
+
+    .recaptcha-badge {
+      text-align: center;
+      font-size: 11px;
+      color: var(--secondary-text-color);
+      margin-top: 8px;
+    }
+
+    .recaptcha-badge a {
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      </svg>
+    </div>
+    <h1 data-i18n="start.heading">QR Login</h1>
+    <p class="subtitle" data-i18n="start.subtitle">Sign in to Home Assistant using a device you are already signed in on</p>
+
+    <div class="channel-tabs" id="channelTabs" style="display: none;">
+      <button class="tab-btn active" data-channel="qr" onclick="switchChannel('qr')" data-i18n="start.tab_qr">QR code</button>
+      <button class="tab-btn" data-channel="notify" onclick="switchChannel('notify')" data-i18n="start.tab_notify">Notification</button>
+    </div>
+
+    <div class="tab-panel active" id="panel-qr">
+      <div class="qr-container">
+        <div id="qrSpinner" class="spinner" style="display: none;"></div>
+        <div id="qrCode"></div>
+        <p class="qr-instruction" data-i18n="start.qr_instruction">Scan it with a device already connected to your instance</p>
+      </div>
+      <div class="deep-link-notice" data-i18n="start.qr_notice">
+        Works with a browser you are already signed in on. If you do not have
+        one, the page it opens will offer the Companion App.
+      </div>
+    </div>
+
+    <div class="tab-panel" id="panel-notify">
+      <div class="form-group">
+        <label for="usernameInput" data-i18n="start.username_label">Username to request access for</label>
+        <input type="text" id="usernameInput" placeholder="e.g. guest_qr"
+               data-i18n-placeholder="start.username_placeholder" autocomplete="username">
+      </div>
+      <button class="btn btn-primary" id="requestBtn" onclick="requestAccess()" data-i18n="start.request_button">Request access</button>
+      <div id="notifySpinner" class="spinner" style="display: none;"></div>
+      <p class="waiting-text" id="waitingText" style="display: none;" data-i18n="start.waiting">Waiting for approval...</p>
+    </div>
+
+    <div id="errorContainer"></div>
+    <div id="successContainer"></div>
+  </div>
+
+  <script src="/qr_login/static/qrcode.min.js"></script>
+  <script src="/qr_login/static/i18n.js"></script>
+  <script>
+    const API_BASE = '/api/qr_login';
+    const CLIENT_ID = window.location.origin + '/';
+
+    const t = window.QRLoginI18n.t;
+
+    function errorText(code) {
+      const key = `error.${code}`;
+      const text = t(key);
+      return text === key ? t('error.generic') : text;
+    }
+
+    const CHANNELS = ['qr', 'notify'];
+
+    let currentSessionId = null;
+    let statusPollInterval = null;
+    let currentChannel = 'qr';
+    let recaptchaSiteKey = null;
+    let errorHideTimeout = null;
+
+    async function init() {
+      window.QRLoginI18n.apply();
+
+      const params = new URLSearchParams(window.location.search);
+      const channelParam = params.get('channel');
+      if (channelParam && CHANNELS.includes(channelParam)) {
+        currentChannel = channelParam;
+      }
+
+      const config = await fetchConfig();
+
+      if (config.recaptcha_site_key) {
+        recaptchaSiteKey = config.recaptcha_site_key;
+        await loadRecaptchaScript(recaptchaSiteKey);
+      }
+
+      setupChannels(config);
+      await startSession();
+    }
+
+    function loadRecaptchaScript(siteKey) {
+      return new Promise((resolve) => {
+        if (document.getElementById('recaptcha-script')) {
+          resolve();
+          return;
+        }
+        const script = document.createElement('script');
+        script.id = 'recaptcha-script';
+        script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
+        script.onload = resolve;
+        script.onerror = () => {
+          console.error(
+            'QR Login: reCAPTCHA script could not be loaded from google.com'
+          );
+          resolve();
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    // v3 tokens are single use and expire after two minutes, so one is
+    // fetched per request rather than once per page load.
+    function recaptchaToken() {
+      return new Promise((resolve) => {
+        if (!recaptchaSiteKey) {
+          resolve(null);
+          return;
+        }
+        if (typeof grecaptcha === 'undefined') {
+          console.error('QR Login: grecaptcha is not available on this page');
+          resolve(null);
+          return;
+        }
+        let settled = false;
+        const finish = (token, reason) => {
+          if (settled) return;
+          settled = true;
+          if (!token) {
+            console.error('QR Login: no reCAPTCHA token —', reason || 'unknown');
+          }
+          resolve(token || null);
+        };
+        setTimeout(() => finish(null, 'timed out after 10s'), 10000);
+        try {
+          grecaptcha.ready(() => {
+            grecaptcha
+              .execute(recaptchaSiteKey, { action: 'qr_login' })
+              .then((token) => finish(token))
+              .catch((err) => finish(null, err));
+          });
+        } catch (err) {
+          finish(null, err);
+        }
+      });
+    }
+
+    // Without a token the server rejects /start, so say what to check instead
+    // of leaving the page empty on a silent failure.
+    function showRecaptchaUnavailable() {
+      showError(
+        t('error.recaptcha_unavailable', { origin: window.location.origin }),
+        true
+      );
+    }
+
+    async function fetchConfig() {
+      try {
+        const resp = await fetch('/api/qr_login/config');
+        return await resp.json();
+      } catch {
+        return {};
+      }
+    }
+
+    function setupChannels(config) {
+      const tabs = document.getElementById('channelTabs');
+      window.__enabledChannels = config.enabled_channels || CHANNELS.slice();
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.style.display = window.__enabledChannels.includes(btn.dataset.channel) ? '' : 'none';
+      });
+
+      if (window.__enabledChannels.length > 1) {
+        tabs.style.display = 'flex';
+        if (!window.__enabledChannels.includes(currentChannel)) {
+          currentChannel = window.__enabledChannels[0];
+        }
+        switchChannel(currentChannel);
+      } else {
+        currentChannel = window.__enabledChannels[0] || 'qr';
+        tabs.style.display = 'none';
+        document.querySelectorAll('.tab-panel').forEach(panel => {
+          panel.classList.toggle('active', panel.id === `panel-${currentChannel}`);
+        });
+        const visibleButtons = document.querySelectorAll('.tab-btn');
+        visibleButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.channel === currentChannel));
+      }
+    }
+
+    function switchChannel(channel) {
+      if (window.__enabledChannels && !window.__enabledChannels.includes(channel)) return;
+      currentChannel = channel;
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.channel === channel);
+      });
+      document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.id === `panel-${channel}`);
+      });
+
+      if (channel === 'qr' && currentSessionId) {
+        generateQR();
+      }
+    }
+
+    async function startSession() {
+      if (currentChannel !== 'qr') return;
+
+      const spinner = document.getElementById('qrSpinner');
+      spinner.style.display = 'block';
+
+      try {
+        const token = await recaptchaToken();
+        if (recaptchaSiteKey && !token) {
+          showRecaptchaUnavailable();
+          return;
+        }
+
+        const resp = await fetch(`${API_BASE}/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: '',
+            channel: currentChannel,
+            recaptcha_token: token
+          })
+        });
+        const data = await resp.json();
+
+        if (data.error) {
+          showError(errorText(data.error));
+          return;
+        }
+
+        currentSessionId = data.session_id;
+        startPolling();
+        generateQR();
+      } catch (err) {
+        showError(t('error.connection'));
+      } finally {
+        spinner.style.display = 'none';
+      }
+    }
+
+    async function requestAccess() {
+      const username = document.getElementById('usernameInput').value.trim();
+      if (!username) {
+        showError(t('start.username_required'));
+        return;
+      }
+
+      const btn = document.getElementById('requestBtn');
+      btn.disabled = true;
+      btn.textContent = t('start.request_sending');
+
+      document.getElementById('notifySpinner').style.display = 'block';
+      document.getElementById('waitingText').style.display = 'block';
+      hideMessages();
+
+      try {
+        const token = await recaptchaToken();
+        if (recaptchaSiteKey && !token) {
+          showRecaptchaUnavailable();
+          resetNotifyUI();
+          return;
+        }
+
+        const resp = await fetch(`${API_BASE}/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username,
+            channel: currentChannel,
+            recaptcha_token: token
+          })
+        });
+        const data = await resp.json();
+
+        if (data.error) {
+          showError(errorText(data.error));
+          resetNotifyUI();
+          return;
+        }
+
+        currentSessionId = data.session_id;
+        startPolling();
+      } catch (err) {
+        showError(t('error.connection'));
+        resetNotifyUI();
+      }
+    }
+
+    function resetNotifyUI() {
+      const btn = document.getElementById('requestBtn');
+      btn.disabled = false;
+      btn.textContent = t('start.request_button');
+      document.getElementById('notifySpinner').style.display = 'none';
+      document.getElementById('waitingText').style.display = 'none';
+    }
+
+    function generateQR() {
+      if (!currentSessionId || currentChannel !== 'qr') return;
+
+      const qrUrl = `${window.location.origin}/qr_login/approve` +
+        `?session_id=${encodeURIComponent(currentSessionId)}`;
+
+      const container = document.getElementById('qrCode');
+      container.replaceChildren();
+
+      if (typeof QRCode === 'undefined') {
+        showError(t('start.qr_failed'));
+        return;
+      }
+
+      new QRCode(container, {
+        text: qrUrl,
+        width: 200,
+        height: 200,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+
+    function stopPolling() {
+      if (statusPollInterval) {
+        clearInterval(statusPollInterval);
+        statusPollInterval = null;
+      }
+    }
+
+    function resetChannelUI() {
+      if (currentChannel === 'notify') {
+        resetNotifyUI();
+      }
+    }
+
+    function startPolling() {
+      stopPolling();
+      let failures = 0;
+
+      statusPollInterval = setInterval(async () => {
+        if (!currentSessionId) {
+          stopPolling();
+          return;
+        }
+
+        try {
+          const resp = await fetch(`${API_BASE}/status?session_id=${currentSessionId}`);
+          if (!resp.ok) {
+            stopPolling();
+            resetChannelUI();
+            showError(t('start.session_lost'));
+            return;
+          }
+          const data = await resp.json();
+          failures = 0;
+
+          if (data.status === 'approved') {
+            stopPolling();
+            resetChannelUI();
+            showSuccess(data);
+          } else if (data.status === 'denied') {
+            stopPolling();
+            resetChannelUI();
+            showError(t('start.denied'));
+          } else if (data.status === 'expired') {
+            stopPolling();
+            resetChannelUI();
+            showError(t('start.expired'));
+          } else if (data.status === 'error') {
+            stopPolling();
+            resetChannelUI();
+            showError(t('error.generic'));
+          }
+        } catch (err) {
+          failures += 1;
+          console.error('Polling error:', err);
+          if (failures >= 3) {
+            stopPolling();
+            resetChannelUI();
+            showError(t('error.connection'));
+          }
+        }
+      }, 2000);
+    }
+
+    function showSuccess(data) {
+      try {
+        // AuthData shape read back by the HA frontend. hassUrl must have no
+        // trailing slash and clientId must have one: getAuth() strips the
+        // slash before comparing, so a stored one discards the tokens.
+        const expiresIn = data.token_expires_in || 1800;
+        localStorage.setItem('hassTokens', JSON.stringify({
+          hassUrl: window.location.origin,
+          clientId: CLIENT_ID,
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          expires_in: expiresIn,
+          expires: Date.now() + expiresIn * 1000
+        }));
+      } catch (err) {
+        console.warn('Token storage failed:', err);
+      }
+
+      const container = document.getElementById('successContainer');
+      const box = document.createElement('div');
+      box.className = 'success-message';
+      box.textContent = t('start.approved');
+      container.replaceChildren(box);
+      container.style.display = 'block';
+
+      setTimeout(() => { window.location.href = '/'; }, 800);
+    }
+
+    function showError(message, persistent) {
+      const container = document.getElementById('errorContainer');
+      const box = document.createElement('div');
+      box.className = 'error-message';
+      box.textContent = message;
+      container.replaceChildren(box);
+      container.style.display = 'block';
+      clearTimeout(errorHideTimeout);
+      if (!persistent) {
+        errorHideTimeout = setTimeout(() => {
+          container.style.display = 'none';
+        }, 10000);
+      }
+    }
+
+    function hideMessages() {
+      clearTimeout(errorHideTimeout);
+      document.getElementById('errorContainer').style.display = 'none';
+      document.getElementById('successContainer').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

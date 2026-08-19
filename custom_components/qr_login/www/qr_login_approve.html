@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en" data-i18n-title="approve.title">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Approve access - Home Assistant</title>
+  <style>
+    :root {
+      --primary-color: #03a9f4;
+      --primary-background-color: #fafafa;
+      --card-background-color: #ffffff;
+      --primary-text-color: #212121;
+      --secondary-text-color: #727272;
+      --divider-color: #e0e0e0;
+      --error-color: #db4437;
+      --success-color: #43a047;
+      --warning-color: #f57c00;
+      font-family: "Roboto", "Noto", -apple-system, BlinkMacSystemFont,
+        "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary-background-color: #111111;
+        --card-background-color: #1c1c1c;
+        --primary-text-color: #e1e1e1;
+        --secondary-text-color: #9b9b9b;
+        --divider-color: #333333;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--primary-background-color);
+      color: var(--primary-text-color);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .card {
+      background-color: var(--card-background-color);
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      padding: 32px 24px;
+      width: 100%;
+      max-width: 400px;
+      transition: opacity 0.2s ease;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .logo svg {
+      width: 48px;
+      height: 48px;
+      color: var(--primary-color);
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 400;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--secondary-text-color);
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+
+    .request-info {
+      background-color: var(--divider-color);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      border-left: 4px solid var(--warning-color);
+    }
+
+    .request-info h2 {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .request-info h2::before {
+      content: "⚠";
+      font-size: 18px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--divider-color);
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      color: var(--secondary-text-color);
+      font-size: 13px;
+    }
+
+    .info-value {
+      font-weight: 500;
+      word-break: break-all;
+      text-align: right;
+      max-width: 65%;
+    }
+
+    .target-account {
+      background-color: rgba(3, 169, 244, 0.1);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .target-account-label {
+      font-size: 12px;
+      color: var(--secondary-text-color);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .target-account-value {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--primary-color);
+    }
+
+    .target-account-note {
+      font-size: 12px;
+      color: var(--secondary-text-color);
+      margin-top: 6px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background-color 0.2s ease, opacity 0.2s ease;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: #0288d1;
+    }
+
+    .btn-danger {
+      background-color: transparent;
+      color: var(--error-color);
+      border: 1px solid var(--error-color);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background-color: rgba(219, 68, 55, 0.1);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .result-message {
+      text-align: center;
+      padding: 16px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .result-success {
+      background-color: rgba(67, 160, 71, 0.1);
+      color: var(--success-color);
+    }
+
+    .result-error {
+      background-color: rgba(219, 68, 55, 0.1);
+      color: var(--error-color);
+    }
+
+    .result-message .btn {
+      display: block;
+      width: 100%;
+      margin: 16px 0 0;
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .fallback-hint {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--secondary-text-color);
+    }
+
+    .fallback-hint a {
+      color: var(--primary-color);
+    }
+
+    .external-auth-notice {
+      text-align: center;
+      font-size: 12px;
+      color: var(--secondary-text-color);
+      margin-top: 16px;
+      padding: 12px;
+      background-color: var(--divider-color);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      </svg>
+    </div>
+    <h1 data-i18n="approve.heading">Approve access</h1>
+    <p class="subtitle" data-i18n="approve.subtitle">A device is requesting access to your Home Assistant instance</p>
+
+    <div id="pendingView">
+      <div class="request-info">
+        <h2 data-i18n="approve.details">Request details</h2>
+        <div class="info-row">
+          <span class="info-label" data-i18n="approve.ip">IP</span>
+          <span class="info-value" id="clientIp">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label" data-i18n="approve.user_agent">User agent</span>
+          <span class="info-value" id="userAgent">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label" data-i18n="approve.channel">Channel</span>
+          <span class="info-value" id="channelInfo">-</span>
+        </div>
+      </div>
+
+      <div class="target-account">
+        <div class="target-account-label" data-i18n="approve.target_label">Account access is requested for</div>
+        <div class="target-account-value" id="targetUser">-</div>
+        <div class="target-account-note" id="targetUserNote"></div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-primary" id="approveBtn" onclick="handleAction('approve')">
+          <span class="spinner" id="approveSpinner" style="display: none;"></span>
+          <span data-i18n="approve.approve">Approve</span>
+        </button>
+        <button class="btn btn-danger" id="denyBtn" onclick="handleAction('deny')">
+          <span class="spinner" id="denySpinner" style="display: none;"></span>
+          <span data-i18n="approve.deny">Reject</span>
+        </button>
+      </div>
+
+      <div class="external-auth-notice" id="externalAuthNotice" style="display: none;"
+           data-i18n="approve.external_notice">
+        Companion App authentication detected. The token will be retrieved automatically.
+      </div>
+    </div>
+
+    <div id="resultView" style="display: none;">
+      <div class="result-message" id="resultMessage"></div>
+    </div>
+  </div>
+
+  <script src="/qr_login/static/i18n.js"></script>
+  <script>
+    const t = window.QRLoginI18n.t;
+    const API_BASE = '/api/qr_login';
+    const TOKENS_KEY = 'hassTokens';
+    const CLIENT_ID = window.location.origin + '/';
+
+    function channelLabel(channel) {
+      const key = `channel.${channel}`;
+      const text = t(key);
+      return text === key ? channel : text;
+    }
+
+    function errorText(code) {
+      const key = `error.${code}`;
+      const text = t(key);
+      return text === key ? t('error.generic') : text;
+    }
+
+    let sessionId = null;
+    let externalAuth = false;
+    let authToken = null;
+    let refreshToken = null;
+    let clientId = null;
+
+    function spinnerWithLabel(label) {
+      const frag = document.createDocumentFragment();
+      const spinner = document.createElement('span');
+      spinner.className = 'spinner';
+      frag.append(spinner, label);
+      return frag;
+    }
+
+    async function init() {
+      window.QRLoginI18n.apply();
+
+      const params = new URLSearchParams(window.location.search);
+      sessionId = params.get('session_id');
+      externalAuth = params.get('external_auth') === '1';
+
+      if (!sessionId) {
+        showResult('error', t('approve.missing_session'));
+        return;
+      }
+
+      if (externalAuth) {
+        document.getElementById('externalAuthNotice').style.display = 'block';
+        authToken = await getExternalAuthToken();
+      } else {
+        const code = params.get('code');
+        if (code) {
+          authToken = await exchangeCode(code);
+          const clean = window.location.href.split('&code=')[0].split('?code=')[0];
+          history.replaceState(null, '', clean);
+        }
+        const tokens = loadBrowserTokens();
+        if (tokens) {
+          refreshToken = tokens.refresh_token || null;
+          clientId = tokens.clientId || null;
+          if (!authToken) {
+            authToken = tokens.access_token || null;
+          }
+        }
+        const bridgeAvailable = !!(
+          window.externalApp ||
+          window.externalAppV2 ||
+          (window.webkit && window.webkit.messageHandlers &&
+           window.webkit.messageHandlers.getExternalAuth)
+        );
+        if (bridgeAvailable && !authToken) {
+          authToken = await getExternalAuthToken();
+        }
+      }
+
+      await fetchSessionDetails();
+    }
+
+    function loadBrowserTokens() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(TOKENS_KEY));
+        if (!stored || typeof stored !== 'object' || Array.isArray(stored)) {
+          return null;
+        }
+        if (!stored.access_token) return null;
+        return stored;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function storeBrowserTokens(data, cid) {
+      try {
+        const expiresIn = data.expires_in || 1800;
+        localStorage.setItem(TOKENS_KEY, JSON.stringify({
+          // No trailing slash: getAuth() compares against a stripped hassUrl.
+          hassUrl: window.location.origin,
+          clientId: cid,
+          access_token: data.access_token,
+          refresh_token: data.refresh_token || refreshToken,
+          expires_in: expiresIn,
+          expires: Date.now() + expiresIn * 1000
+        }));
+      } catch (err) {
+        console.warn('Could not store the tokens:', err);
+      }
+    }
+
+    async function refreshAccessToken() {
+      if (!refreshToken || !clientId) return null;
+      const body = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        client_id: clientId
+      });
+      try {
+        const resp = await fetch('/auth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString()
+        });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        if (!data.access_token) return null;
+        refreshToken = data.refresh_token || refreshToken;
+        storeBrowserTokens(data, clientId);
+        return data.access_token;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    async function exchangeCode(code) {
+      const body = new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: code,
+        client_id: CLIENT_ID
+      });
+      try {
+        const resp = await fetch('/auth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString()
+        });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        if (!data.access_token) return null;
+        refreshToken = data.refresh_token || null;
+        clientId = CLIENT_ID;
+        storeBrowserTokens(data, CLIENT_ID);
+        return data.access_token;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function normalizeToken(data) {
+      if (typeof data === 'string' && data) {
+        return data;
+      }
+      if (data && typeof data === 'object' && typeof data.access_token === 'string' && data.access_token) {
+        return data.access_token;
+      }
+      return null;
+    }
+
+    function getExternalAuthToken() {
+      return new Promise((resolve) => {
+        let settled = false;
+        const callbackName = 'externalAuthSetToken';
+
+        window[callbackName] = (success, data) => {
+          if (settled) return;
+          settled = true;
+          delete window[callbackName];
+          resolve(success ? normalizeToken(data) : null);
+        };
+
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          delete window[callbackName];
+          resolve(null);
+        };
+        setTimeout(finish, 5000);
+
+        try {
+          if (window.externalAppV2 && typeof window.externalAppV2.postMessage === 'function') {
+            window.externalAppV2.postMessage(JSON.stringify({
+              type: 'getExternalAuth',
+              payload: { callback: callbackName, force: true }
+            }));
+            return;
+          }
+          if (window.externalApp && typeof window.externalApp.getExternalAuth === 'function') {
+            window.externalApp.getExternalAuth(
+              JSON.stringify({ callback: callbackName, force: true })
+            );
+            return;
+          }
+          if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.getExternalAuth) {
+            window.webkit.messageHandlers.getExternalAuth.postMessage({
+              callback: callbackName,
+              force: true
+            });
+            return;
+          }
+        } catch (err) {
+          console.warn('External auth failed:', err);
+        }
+
+        finish();
+      });
+    }
+
+    async function requestJson(url, options) {
+      try {
+        const resp = await fetch(url, options);
+        let data = null;
+        try {
+          data = await resp.json();
+        } catch (err) {
+        }
+
+        if (!resp.ok) {
+          if (resp.status === 401 || resp.status === 403) {
+            return { ok: false, status: resp.status, data, message: null };
+          }
+          const detail = data && data.error
+            ? errorText(data.error)
+            : (data && data.message) || t('error.server', { status: resp.status });
+          return { ok: false, status: resp.status, data, message: detail };
+        }
+
+        return { ok: true, status: resp.status, data };
+      } catch (err) {
+        return { ok: false, status: 0, data: null, message: t('approve.connection_failed') };
+      }
+    }
+
+    async function fetchSessionDetails() {
+      if (!authToken) {
+        showLoginMessage();
+        return;
+      }
+
+      const result = await requestJson(
+        `${API_BASE}/session?session_id=${encodeURIComponent(sessionId)}`,
+        { headers: { 'Authorization': `Bearer ${authToken}` } }
+      );
+
+      if (!result.ok) {
+        if (result.status === 401 || result.status === 403) {
+          showLoginMessage();
+        } else {
+          showResult('error', result.message || t('approve.details_failed'));
+        }
+        return;
+      }
+
+      const data = result.data;
+      if (data.error) {
+        showResult('error', errorText(data.error));
+        return;
+      }
+
+      document.getElementById('clientIp').textContent = data.client_ip || '-';
+      document.getElementById('userAgent').textContent = data.user_agent || '-';
+      document.getElementById('channelInfo').textContent =
+        channelLabel(data.channel) || '-';
+      document.getElementById('targetUser').textContent =
+        data.target_user_name || data.target_user || '-';
+
+      const note = document.getElementById('targetUserNote');
+      note.textContent = data.target_from_mapping
+        ? t('approve.target_mapped')
+        : t('approve.target_unmapped');
+    }
+
+    function loginUrl() {
+      const base = window.location.href.split('?')[0];
+      const redirect = base + '?session_id=' + encodeURIComponent(sessionId || '');
+      return '/auth/authorize?response_type=code' +
+        '&client_id=' + encodeURIComponent(CLIENT_ID) +
+        '&redirect_uri=' + encodeURIComponent(redirect);
+    }
+
+    function companionDeepLink() {
+      return 'homeassistant://navigate/qr_login/approve' +
+        '?session_id=' + encodeURIComponent(sessionId || '') +
+        '&server=default&external_auth=1';
+    }
+
+    function showLoginMessage() {
+      if (externalAuth) {
+        showResult('error', t('approve.external_failed'));
+        return;
+      }
+
+      const appBtn = document.createElement('a');
+      appBtn.className = 'btn btn-primary';
+      appBtn.href = companionDeepLink();
+      appBtn.textContent = t('approve.open_app');
+
+      const loginLink = document.createElement('a');
+      loginLink.href = loginUrl();
+      loginLink.textContent = t('approve.no_app_link');
+
+      const hint = document.createElement('p');
+      hint.className = 'fallback-hint';
+      hint.append(t('approve.no_app_prefix'), loginLink, t('approve.no_app_suffix'));
+
+      const wrapper = document.createElement('div');
+      wrapper.append(t('approve.no_session'), appBtn, hint);
+      showResult('error', wrapper);
+    }
+
+    async function postAction(action) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (typeof authToken === 'string' && authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      return requestJson(`${API_BASE}/approve`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ session_id: sessionId, action })
+      });
+    }
+
+    async function handleAction(action) {
+      const approveBtn = document.getElementById('approveBtn');
+      const denyBtn = document.getElementById('denyBtn');
+      const approveSpinner = document.getElementById('approveSpinner');
+      const denySpinner = document.getElementById('denySpinner');
+
+      approveBtn.disabled = true;
+      denyBtn.disabled = true;
+
+      if (action === 'approve') {
+        approveSpinner.style.display = 'inline-block';
+        approveBtn.replaceChildren(spinnerWithLabel(t('approve.approving')));
+      } else {
+        denySpinner.style.display = 'inline-block';
+        denyBtn.replaceChildren(spinnerWithLabel(t('approve.denying')));
+      }
+
+      let result = await postAction(action);
+
+      if (!result.ok && result.status === 401 && !externalAuth && refreshToken) {
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          authToken = newToken;
+          result = await postAction(action);
+        }
+      }
+
+      if (!result.ok) {
+        if (result.status === 401 || result.status === 403) {
+          showLoginMessage();
+        } else {
+          showResult('error', result.message || t('error.generic'));
+        }
+        return;
+      }
+
+      const data = result.data;
+      if (data.error) {
+        showResult('error', errorText(data.error));
+        return;
+      }
+
+      if (action === 'approve') {
+        const account = document.createElement('strong');
+        account.textContent = data.target_user_name || data.target_user || '';
+        const wrapper = document.createElement('span');
+        wrapper.append(t('approve.approved_for'), account);
+        showResult('success', wrapper);
+      } else {
+        showResult('error', t('approve.rejected'));
+      }
+    }
+
+    function showResult(type, message) {
+      document.getElementById('pendingView').style.display = 'none';
+      const resultView = document.getElementById('resultView');
+      const resultMessage = document.getElementById('resultMessage');
+      resultView.style.display = 'block';
+      resultMessage.replaceChildren(
+        message instanceof Node ? message : document.createTextNode(message)
+      );
+      resultMessage.className = `result-message result-${type}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
