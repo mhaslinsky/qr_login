@@ -637,7 +637,9 @@
 
         inFlight = true;
         try {
-          const resp = await fetch(`${API_BASE}/status?session_id=${encodeURIComponent(currentSessionId)}&poll_secret=${encodeURIComponent(currentPollSecret)}`);
+          const resp = await fetch(`${API_BASE}/status?session_id=${encodeURIComponent(currentSessionId)}`, {
+            headers: { Authorization: `QRLogin ${currentPollSecret}` }
+          });
           if (generation !== pollGeneration) return;
           if (!resp.ok) {
             stopPolling();

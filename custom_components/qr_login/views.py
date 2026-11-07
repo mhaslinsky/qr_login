@@ -229,6 +229,12 @@ class QRLoginStatusView(HomeAssistantView):
     requires_auth = False
     cors_allowed = True
 
+    @staticmethod
+    def json(result, status_code=200, headers=None):
+        return HomeAssistantView.json(
+            result, status_code, headers={**(headers or {}), "Cache-Control": "no-store"}
+        )
+
     async def get(self, request: web.Request) -> web.Response:
         data = _get_data(request.app["hass"])
         session_id = request.query.get("session_id")
@@ -256,7 +262,9 @@ class QRLoginStatusView(HomeAssistantView):
             return self.json(session.to_public_dict())
 
         # The QR is public, so only its separate poll secret can collect tokens.
-        poll_secret = request.query.get("poll_secret", "")
+        scheme, _, poll_secret = request.headers.get("Authorization", "").partition(" ")
+        if scheme.casefold() != "qrlogin":
+            poll_secret = ""
         if (
             session.status == "approved"
             and session.access_token is not None
@@ -267,7 +275,7 @@ class QRLoginStatusView(HomeAssistantView):
             session.access_token = None
             session.refresh_token = None
             data.sessions.pop(session_id, None)
-            return self.json(payload, headers={"Cache-Control": "no-store"})
+            return self.json(payload)
 
         return self.json(session.to_public_dict())
 

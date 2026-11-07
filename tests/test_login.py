@@ -21,10 +21,10 @@ async def test_poll_secret_collects_tokens_once(login):
     assert start["poll_secret"] != session.session_id and session.client_id == "https://ha.test/"
     session.status, session.access_token, session.refresh_token = "approved", "access", "refresh"
     for secret, collects in ((None, False), ("wrong", False), (start["poll_secret"], True), (start["poll_secret"], False)):
-        request.query = {"session_id": session.session_id}
-        if secret is not None:
-            request.query["poll_secret"] = secret
+        request.query = {"session_id": session.session_id, "poll_secret": start["poll_secret"]}
+        request.headers = {"Authorization": f"QRLogin {secret}"} if secret is not None else {}
         response = await views.QRLoginStatusView().get(request)
+        assert response.headers["Cache-Control"] == "no-store"
         result = json.loads(response.body)
         if secret == start["poll_secret"] and not collects:
             assert response.status == 404
@@ -91,3 +91,11 @@ async def test_missing_ha_url_returns_clean_error(login, monkeypatch):
     response = await views.QRLoginStartView().post(request)
     assert response.status == 503
     assert json.loads(response.body) == {"error": "client_id_unavailable"}
+
+
+async def test_status_errors_disable_caching(login):
+    _, request = login
+    for query, expected in (({}, 400), ({"session_id": "missing"}, 404)):
+        request.query = query
+        response = await views.QRLoginStatusView().get(request)
+        assert response.status == expected and response.headers["Cache-Control"] == "no-store"

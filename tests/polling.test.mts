@@ -17,7 +17,12 @@ test("polling prevents overlap, ignores stopped responses, and preserves saved t
     localStorage: { setItem: (key, value) => saved.set(key, value) },
     setInterval: callback => { poll = callback; return 1; }, clearInterval() {},
     setTimeout() {}, clearTimeout() {}, console, errors,
-    fetch: () => { calls++; return new Promise(resolve => { finish = resolve; }); },
+    fetch: (url, options) => {
+      assert.equal(url.includes("poll_secret"), false);
+      assert.equal(options.headers.Authorization, "QRLogin secret");
+      calls++;
+      return new Promise(resolve => { finish = resolve; });
+    },
   });
   script.runInContext(context);
   vm.runInContext("currentSessionId = 'session'; currentPollSecret = 'secret'; showError = message => errors.push(message); resetChannelUI = () => {}; startPolling()", context);
