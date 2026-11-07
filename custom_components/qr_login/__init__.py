@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
+    CONF_ALLOWED_CLIENT_IDS,
     CONF_DEFAULT_CHANNEL,
     CONF_ENABLED_CHANNELS,
     CONF_NOTIFICATION_COOLDOWN,
@@ -68,6 +69,7 @@ class QrLoginData:
 def _config_from_options(options: dict[str, Any]) -> dict[str, Any]:
     return {
         "enabled": True,
+        CONF_ALLOWED_CLIENT_IDS: options.get(CONF_ALLOWED_CLIENT_IDS, []),
         CONF_DEFAULT_CHANNEL: options.get(CONF_DEFAULT_CHANNEL, DEFAULT_CHANNEL),
         CONF_ENABLED_CHANNELS: options.get(
             CONF_ENABLED_CHANNELS, DEFAULT_ENABLED_CHANNELS

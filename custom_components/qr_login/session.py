@@ -34,6 +34,7 @@ class QRLoginSession:
     # Only an admin-configured mapping may retarget the token; a username
     # typed by the anonymous requester must never be trusted as a target.
     target_from_mapping: bool = False
+    poll_secret: str = ""
     client_id: str = ""
     status: str = "pending"
     access_token: str | None = None
