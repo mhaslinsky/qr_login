@@ -8,8 +8,8 @@ from custom_components.qr_login.config_flow import QRLoginOptionsFlow
 from custom_components.qr_login.const import DOMAIN
 
 @pytest.fixture
-def login(hass, monkeypatch):
-    monkeypatch.setattr(views, "resolve_client_id", lambda *_: "https://ha.test/")
+def login(hass):
+    hass.config.external_url = "https://ha.test"
     data = SimpleNamespace(config=_config_from_options({}), sessions={}, rate_limiter=Mock())
     hass.data[DOMAIN] = data
     return data, Mock(app={"hass": hass}, remote="127.0.0.1", headers={}, query={}, json=AsyncMock(return_value={}))
@@ -73,3 +73,21 @@ async def test_denied_and_error_sessions_are_consumed(login):
         request.query = {"session_id": start["session_id"]}
         assert json.loads((await views.QRLoginStatusView().get(request)).body)["status"] == status
         assert (await views.QRLoginStatusView().get(request)).status == 404
+
+async def test_internal_origin_with_empty_allowlist(login):
+    data, request = login
+    request.host = "10.0.0.14:8123"
+    request.headers = {"Origin": "http://10.0.0.14:8123"}
+    request.json.return_value = {"client_id": "http://10.0.0.14:8123/"}
+    response = await views.QRLoginStartView().post(request)
+    assert response.status == 200
+    assert data.sessions[json.loads(response.body)["session_id"]].client_id == "http://10.0.0.14:8123/"
+    data.config["allowed_client_ids"] = ["https://home.test/"]
+    assert (await views.QRLoginStartView().post(request)).status == 400
+
+async def test_missing_ha_url_returns_clean_error(login, monkeypatch):
+    _, request = login
+    monkeypatch.setattr(views, "resolve_client_id", Mock(side_effect=views.NoURLAvailableError))
+    response = await views.QRLoginStartView().post(request)
+    assert response.status == 503
+    assert json.loads(response.body) == {"error": "client_id_unavailable"}

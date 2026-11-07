@@ -5,10 +5,12 @@ import logging
 import secrets
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.network import NoURLAvailableError
 
 from .auth_util import (
     async_create_token_for_user,
@@ -63,6 +65,22 @@ def _clean_str(value, max_length: int = 255) -> str:
     return value.strip()[:max_length]
 
 
+def _origin_from_request(request: web.Request) -> str:
+    """Accept a page origin only when it matches the request host."""
+    candidate = request.headers.get("Origin") or request.headers.get("Referer")
+    if not candidate:
+        return ""
+    try:
+        parsed = urlparse(candidate)
+    except ValueError:
+        return ""
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return ""
+    if not request.host or parsed.netloc.casefold() != request.host.casefold():
+        return ""
+    return f"{parsed.scheme}://{parsed.netloc}/"
+
+
 class QRLoginStartView(HomeAssistantView):
     url = "/api/qr_login/start"
     name = "api:qr_login:start"
@@ -100,9 +118,18 @@ class QRLoginStartView(HomeAssistantView):
         if payload is None:
             return self.json({"error": "invalid_json"}, status_code=400)
 
-        allowed_client_ids = data.config.get(CONF_ALLOWED_CLIENT_IDS) or [
-            resolve_client_id(hass, None)
-        ]
+        allowed_client_ids = data.config.get(CONF_ALLOWED_CLIENT_IDS)
+        if not allowed_client_ids:
+            request_origin = _origin_from_request(request)
+            try:
+                resolved_client_id = resolve_client_id(hass, None)
+            except NoURLAvailableError:
+                resolved_client_id = ""
+            allowed_client_ids = [
+                value for value in (request_origin, resolved_client_id) if value
+            ]
+            if not allowed_client_ids:
+                return self.json({"error": "client_id_unavailable"}, status_code=503)
         client_id = payload.get("client_id", allowed_client_ids[0])
         if not isinstance(client_id, str) or client_id not in allowed_client_ids:
             return self.json({"error": "invalid_client_id"}, status_code=400)
