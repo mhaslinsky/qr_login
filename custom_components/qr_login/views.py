@@ -257,19 +257,24 @@ class QRLoginStatusView(HomeAssistantView):
             data.sessions.pop(session_id, None)
             return self.json({"status": "expired"})
 
-        if session.status in ("denied", "error"):
-            data.sessions.pop(session_id, None)
-            return self.json(session.to_public_dict())
-
-        # The QR is public, so only its separate poll secret can collect tokens.
+        # The QR is public, so only its separate poll secret can consume a result.
         scheme, _, poll_secret = request.headers.get("Authorization", "").partition(" ")
         if scheme.casefold() != "qrlogin":
             poll_secret = ""
+        authorized_poll = (
+            bool(session.poll_secret)
+            and poll_secret.isascii()
+            and hmac.compare_digest(session.poll_secret, poll_secret)
+        )
+        if session.status in ("denied", "error"):
+            if authorized_poll:
+                data.sessions.pop(session_id, None)
+            return self.json(session.to_public_dict())
+
         if (
             session.status == "approved"
             and session.access_token is not None
-            and poll_secret.isascii()
-            and hmac.compare_digest(session.poll_secret, poll_secret)
+            and authorized_poll
         ):
             payload = session.to_public_dict(include_tokens=True)
             session.access_token = None

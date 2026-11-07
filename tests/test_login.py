@@ -75,7 +75,10 @@ async def test_denied_and_error_sessions_are_consumed(login):
         start = json.loads((await views.QRLoginStartView().post(request)).body)
         data.sessions[start["session_id"]].status = status
         request.query = {"session_id": start["session_id"]}
-        assert json.loads((await views.QRLoginStatusView().get(request)).body)["status"] == status
+        for secret in (None, "wrong", start["poll_secret"]):
+            request.headers = {"Authorization": f"QRLogin {secret}"} if secret else {}
+            assert json.loads((await views.QRLoginStatusView().get(request)).body)["status"] == status
+            assert (start["session_id"] in data.sessions) == (secret != start["poll_secret"])
         assert (await views.QRLoginStatusView().get(request)).status == 404
 
 async def test_internal_origin_with_empty_allowlist(login):
