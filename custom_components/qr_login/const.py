@@ -2,6 +2,8 @@
 
 DOMAIN = "qr_login"
 
+CONF_ALLOWED_CLIENT_IDS = "allowed_client_ids"
+
 CONF_DEFAULT_CHANNEL = "default_channel"
 CONF_ENABLED_CHANNELS = "enabled_channels"
 CONF_RECAPTCHA_SITE_KEY = "recaptcha_site_key"

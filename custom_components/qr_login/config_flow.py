@@ -22,6 +22,7 @@ from homeassistant.helpers.selector import (
 from .const import (
     ADD_MAPPING_SENTINEL,
     CONF_CHANNEL,
+    CONF_ALLOWED_CLIENT_IDS,
     CONF_DEFAULT_CHANNEL,
     CONF_ENABLED_CHANNELS,
     CONF_NOTIFICATION_COOLDOWN,
@@ -115,6 +116,7 @@ class QRLoginOptionsFlow(config_entries.OptionsFlow):
             flat = self._flatten_sections(user_input)
             for key in self._CLEARABLE:
                 flat[key] = (flat.get(key) or "").strip()
+            flat[CONF_ALLOWED_CLIENT_IDS] = flat.get(CONF_ALLOWED_CLIENT_IDS, [])
             schema_options = {**self._options, **flat}
 
             if not flat.get(CONF_ENABLED_CHANNELS):
@@ -157,6 +159,10 @@ class QRLoginOptionsFlow(config_entries.OptionsFlow):
     def _main_schema(self, options):
         return vol.Schema(
             {
+                vol.Optional(
+                    CONF_ALLOWED_CLIENT_IDS,
+                    default=options.get(CONF_ALLOWED_CLIENT_IDS, []),
+                ): TextSelector(TextSelectorConfig(multiple=True)),
                 vol.Required("channels"): section(
                     vol.Schema(
                         {

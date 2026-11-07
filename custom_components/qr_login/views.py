@@ -1,19 +1,24 @@
 """HTTP endpoints and pages for QR Login."""
 
+import hmac
 import logging
 import secrets
 import time
 from pathlib import Path
-from urllib.parse import urlparse
 
 from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
 
-from .auth_util import async_create_token_for_user, async_resolve_user
+from .auth_util import (
+    async_create_token_for_user,
+    async_resolve_user,
+    resolve_client_id,
+)
 from .const import (
     CHANNEL_NOTIFY,
     CHANNEL_QR,
+    CONF_ALLOWED_CLIENT_IDS,
     CONF_CHANNEL,
     CONF_DEFAULT_CHANNEL,
     CONF_ENABLED_CHANNELS,
@@ -58,35 +63,11 @@ def _clean_str(value, max_length: int = 255) -> str:
     return value.strip()[:max_length]
 
 
-def _origin_from_request(request: web.Request) -> str:
-    """Return the origin the page was served from, used as token client_id.
-
-    Origin and Referer are attacker-controlled, so only accept a value
-    pointing at the host this request was addressed to.
-    """
-    candidate = request.headers.get("Origin") or request.headers.get("Referer")
-    if not candidate:
-        return ""
-    try:
-        parsed = urlparse(candidate)
-    except ValueError:
-        return ""
-    if parsed.scheme not in ("http", "https") or not parsed.netloc:
-        return ""
-    if not request.host or parsed.netloc.casefold() != request.host.casefold():
-        _LOGGER.debug(
-            "Origin '%s' does not match host '%s', ignoring it",
-            candidate,
-            request.host,
-        )
-        return ""
-    return f"{parsed.scheme}://{parsed.netloc}/"
-
-
 class QRLoginStartView(HomeAssistantView):
     url = "/api/qr_login/start"
     name = "api:qr_login:start"
     requires_auth = False
+    cors_allowed = True
 
     async def post(self, request: web.Request) -> web.Response:
         hass: HomeAssistant = request.app["hass"]
@@ -118,6 +99,13 @@ class QRLoginStartView(HomeAssistantView):
         payload = await _read_json_object(request)
         if payload is None:
             return self.json({"error": "invalid_json"}, status_code=400)
+
+        allowed_client_ids = data.config.get(CONF_ALLOWED_CLIENT_IDS) or [
+            resolve_client_id(hass, None)
+        ]
+        client_id = payload.get("client_id", allowed_client_ids[0])
+        if not isinstance(client_id, str) or client_id not in allowed_client_ids:
+            return self.json({"error": "invalid_client_id"}, status_code=400)
 
         username = _clean_str(payload.get("username"))
         requested_channel = payload.get("channel")
@@ -173,7 +161,8 @@ class QRLoginStartView(HomeAssistantView):
             channel=channel,
             public_channel=public_channel,
             target_from_mapping=target_from_mapping,
-            client_id=_origin_from_request(request),
+            client_id=client_id,
+            poll_secret=secrets.token_urlsafe(32),
             client_ip=client_ip,
             user_agent=_clean_str(request.headers.get("User-Agent")) or "unknown",
             expires_at=time.time()
@@ -197,11 +186,13 @@ class QRLoginStartView(HomeAssistantView):
             {
                 "status": "pending",
                 "session_id": session_id,
+                "poll_secret": session.poll_secret,
                 "channel": public_channel,
                 "expires_in": data.config.get(
                     CONF_SESSION_TIMEOUT, DEFAULT_SESSION_TIMEOUT
                 ),
-            }
+            },
+            headers={"Cache-Control": "no-store"},
         )
 
 
@@ -209,6 +200,7 @@ class QRLoginStatusView(HomeAssistantView):
     url = "/api/qr_login/status"
     name = "api:qr_login:status"
     requires_auth = False
+    cors_allowed = True
 
     async def get(self, request: web.Request) -> web.Response:
         data = _get_data(request.app["hass"])
@@ -232,11 +224,18 @@ class QRLoginStatusView(HomeAssistantView):
             data.sessions.pop(session_id, None)
             return self.json({"status": "expired"})
 
-        if session.status in ("approved", "denied", "error"):
-            data.sessions.pop(session_id, None)
-            return self.json(
-                session.to_public_dict(include_tokens=(session.status == "approved"))
-            )
+        # The QR is public, so only its separate poll secret can collect tokens.
+        poll_secret = request.query.get("poll_secret", "")
+        if (
+            session.status == "approved"
+            and session.access_token is not None
+            and poll_secret.isascii()
+            and hmac.compare_digest(session.poll_secret, poll_secret)
+        ):
+            payload = session.to_public_dict(include_tokens=True)
+            session.access_token = None
+            session.refresh_token = None
+            return self.json(payload, headers={"Cache-Control": "no-store"})
 
         return self.json(session.to_public_dict())
 
@@ -447,7 +446,7 @@ class QRLoginApproveView(HomeAssistantView):
                 hass,
                 user,
                 client_ip=session.client_ip,
-                client_id=session.client_id or _origin_from_request(request),
+                client_id=session.client_id,
             )
         except Exception:
             _LOGGER.exception(

@@ -344,6 +344,7 @@
     const CHANNELS = ['qr', 'notify'];
 
     let currentSessionId = null;
+    let currentPollSecret = null;
     let statusPollInterval = null;
     let currentChannel = 'qr';
     let recaptchaSiteKey = null;
@@ -502,6 +503,7 @@
           body: JSON.stringify({
             username: '',
             channel: currentChannel,
+            client_id: CLIENT_ID,
             recaptcha_token: token
           })
         });
@@ -513,6 +515,7 @@
         }
 
         currentSessionId = data.session_id;
+        currentPollSecret = data.poll_secret;
         startPolling();
         generateQR();
       } catch (err) {
@@ -551,6 +554,7 @@
           body: JSON.stringify({
             username,
             channel: currentChannel,
+            client_id: CLIENT_ID,
             recaptcha_token: token
           })
         });
@@ -563,6 +567,7 @@
         }
 
         currentSessionId = data.session_id;
+        currentPollSecret = data.poll_secret;
         startPolling();
       } catch (err) {
         showError(t('error.connection'));
@@ -626,7 +631,7 @@
         }
 
         try {
-          const resp = await fetch(`${API_BASE}/status?session_id=${currentSessionId}`);
+          const resp = await fetch(`${API_BASE}/status?session_id=${encodeURIComponent(currentSessionId)}&poll_secret=${encodeURIComponent(currentPollSecret)}`);
           if (!resp.ok) {
             stopPolling();
             resetChannelUI();

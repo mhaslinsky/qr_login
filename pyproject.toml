@@ -1,0 +1,11 @@
+[dependency-groups]
+test = ["pytest-homeassistant-custom-component==0.13.316"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[project]
+name = "qr-login"
+version = "1.0.0"
+requires-python = ">=3.13.2"

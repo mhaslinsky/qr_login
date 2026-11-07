@@ -61,6 +61,9 @@
               "session_timeout": "Timeout sessione (secondi)"
             }
           }
+        },
+        "data": {
+          "allowed_client_ids": "ID client consentiti"
         }
       },
       "mappings": {

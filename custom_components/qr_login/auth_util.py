@@ -61,7 +61,7 @@ def resolve_client_id(hass: HomeAssistant, preferred: str | None) -> str:
     if preferred:
         return preferred
 
-    for prefer_external in (False, True):
+    for prefer_external in (True, False):
         try:
             return get_url(hass, prefer_external=prefer_external).rstrip("/") + "/"
         except NoURLAvailableError:
