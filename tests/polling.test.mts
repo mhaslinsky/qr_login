@@ -9,6 +9,8 @@ test("polling prevents overlap, ignores stopped responses, and preserves saved t
   let poll;
   let finish;
   let calls = 0;
+  let pollSignal;
+  let expire;
   const saved = new Map([["hassTokens", "saved"]]);
   const errors = [];
   const context = vm.createContext({
@@ -17,11 +19,21 @@ test("polling prevents overlap, ignores stopped responses, and preserves saved t
     localStorage: { setItem: (key, value) => saved.set(key, value) },
     setInterval: callback => { poll = callback; return 1; }, clearInterval() {},
     setTimeout() {}, clearTimeout() {}, console, errors,
+    AbortSignal: { timeout: () => {
+      const controller = new AbortController();
+      pollSignal = controller.signal;
+      expire = () => controller.abort();
+      return pollSignal;
+    } },
     fetch: (url, options) => {
       assert.equal(url.includes("poll_secret"), false);
       assert.equal(options.headers.Authorization, "QRLogin secret");
+      assert.equal(options.signal, pollSignal);
       calls++;
-      return new Promise(resolve => { finish = resolve; });
+      return new Promise((resolve, reject) => {
+        finish = resolve;
+        options.signal.addEventListener("abort", () => reject(new Error("timeout")));
+      });
     },
   });
   script.runInContext(context);
@@ -46,4 +58,20 @@ test("polling prevents overlap, ignores stopped responses, and preserves saved t
   finish({ ok: true, json: async () => ({ status: "approved", access_token: "access", refresh_token: "refresh" }) });
   await valid;
   assert.equal(JSON.parse(saved.get("hassTokens")).refresh_token, "refresh");
+  vm.runInContext("startPolling()", context);
+  let reading;
+  const bodyStarted = new Promise(resolve => { reading = resolve; });
+  const stalledBody = poll();
+  finish({ ok: true, json: () => {
+    reading();
+    return new Promise((resolve, reject) => pollSignal.addEventListener("abort", () => reject(new Error("timeout"))));
+  } });
+  await bodyStarted;
+  expire();
+  await stalledBody;
+  assert.deepEqual(errors, ["start.session_lost", "start.session_lost"]);
+  const completedCalls = calls;
+  const afterTimeout = poll();
+  assert.equal(calls, completedCalls);
+  await afterTimeout;
 });

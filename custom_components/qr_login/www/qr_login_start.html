@@ -636,9 +636,11 @@
         }
 
         inFlight = true;
+        const pollTimeout = AbortSignal.timeout(10000);
         try {
           const resp = await fetch(`${API_BASE}/status?session_id=${encodeURIComponent(currentSessionId)}`, {
-            headers: { Authorization: `QRLogin ${currentPollSecret}` }
+            headers: { Authorization: `QRLogin ${currentPollSecret}` },
+            signal: pollTimeout
           });
           if (generation !== pollGeneration) return;
           if (!resp.ok) {
@@ -674,6 +676,12 @@
           }
         } catch (err) {
           if (generation !== pollGeneration) return;
+          if (pollTimeout.aborted) {
+            stopPolling();
+            resetChannelUI();
+            showError(t('start.session_lost'));
+            return;
+          }
           failures += 1;
           console.error('Polling error:', err);
           if (failures >= 3) {
