@@ -224,6 +224,10 @@ class QRLoginStatusView(HomeAssistantView):
             data.sessions.pop(session_id, None)
             return self.json({"status": "expired"})
 
+        if session.status in ("denied", "error"):
+            data.sessions.pop(session_id, None)
+            return self.json(session.to_public_dict())
+
         # The QR is public, so only its separate poll secret can collect tokens.
         poll_secret = request.query.get("poll_secret", "")
         if (
@@ -235,6 +239,7 @@ class QRLoginStatusView(HomeAssistantView):
             payload = session.to_public_dict(include_tokens=True)
             session.access_token = None
             session.refresh_token = None
+            data.sessions.pop(session_id, None)
             return self.json(payload, headers={"Cache-Control": "no-store"})
 
         return self.json(session.to_public_dict())

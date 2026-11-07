@@ -346,6 +346,7 @@
     let currentSessionId = null;
     let currentPollSecret = null;
     let statusPollInterval = null;
+    let pollGeneration = 0;
     let currentChannel = 'qr';
     let recaptchaSiteKey = null;
     let errorHideTimeout = null;
@@ -608,6 +609,7 @@
     }
 
     function stopPolling() {
+      pollGeneration += 1;
       if (statusPollInterval) {
         clearInterval(statusPollInterval);
         statusPollInterval = null;
@@ -623,15 +625,20 @@
     function startPolling() {
       stopPolling();
       let failures = 0;
+      let inFlight = false;
+      const generation = pollGeneration;
 
       statusPollInterval = setInterval(async () => {
+        if (inFlight || generation !== pollGeneration) return;
         if (!currentSessionId) {
           stopPolling();
           return;
         }
 
+        inFlight = true;
         try {
           const resp = await fetch(`${API_BASE}/status?session_id=${encodeURIComponent(currentSessionId)}&poll_secret=${encodeURIComponent(currentPollSecret)}`);
+          if (generation !== pollGeneration) return;
           if (!resp.ok) {
             stopPolling();
             resetChannelUI();
@@ -639,12 +646,17 @@
             return;
           }
           const data = await resp.json();
+          if (generation !== pollGeneration) return;
           failures = 0;
 
           if (data.status === 'approved') {
             stopPolling();
             resetChannelUI();
-            showSuccess(data);
+            if (data.access_token && data.refresh_token) {
+              showSuccess(data);
+            } else {
+              showError(t('start.session_lost'));
+            }
           } else if (data.status === 'denied') {
             stopPolling();
             resetChannelUI();
@@ -659,6 +671,7 @@
             showError(t('error.generic'));
           }
         } catch (err) {
+          if (generation !== pollGeneration) return;
           failures += 1;
           console.error('Polling error:', err);
           if (failures >= 3) {
@@ -666,6 +679,8 @@
             resetChannelUI();
             showError(t('error.connection'));
           }
+        } finally {
+          inFlight = false;
         }
       }, 2000);
     }

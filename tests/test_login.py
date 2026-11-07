@@ -24,13 +24,18 @@ async def test_poll_secret_collects_tokens_once(login):
         request.query = {"session_id": session.session_id}
         if secret is not None:
             request.query["poll_secret"] = secret
-        result = json.loads((await views.QRLoginStatusView().get(request)).body)
+        response = await views.QRLoginStatusView().get(request)
+        result = json.loads(response.body)
+        if secret == start["poll_secret"] and not collects:
+            assert response.status == 404
+            continue
         assert result["status"] == "approved"
         assert ("access_token" in result) == collects
         assert ("refresh_token" in result) == collects
         if collects:
             assert (result["access_token"], result["refresh_token"]) == ("access", "refresh")
     assert session.access_token is None and session.refresh_token is None
+    assert session.session_id not in data.sessions
 
 async def test_client_id_allowlist_and_empty_default(login):
     data, request = login
@@ -59,3 +64,12 @@ async def test_clearing_allowlist_resets_option():
 def test_only_public_polling_views_allow_cors():
     assert views.QRLoginStartView.cors_allowed and views.QRLoginStatusView.cors_allowed
     assert all(not view.cors_allowed for view in (views.QRLoginApproveView, views.QRLoginSessionInfoView, views.QRLoginSessionsView, views.QRLoginSessionCancelView, views.QRLoginPublicConfigView, views.QRLoginStartPageView, views.QRLoginApprovePageView, views.QRLoginSessionsPageView, views.QRLoginAssetView))
+
+async def test_denied_and_error_sessions_are_consumed(login):
+    data, request = login
+    for status in ("denied", "error"):
+        start = json.loads((await views.QRLoginStartView().post(request)).body)
+        data.sessions[start["session_id"]].status = status
+        request.query = {"session_id": start["session_id"]}
+        assert json.loads((await views.QRLoginStatusView().get(request)).body)["status"] == status
+        assert (await views.QRLoginStatusView().get(request)).status == 404
