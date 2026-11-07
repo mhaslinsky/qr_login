@@ -58,7 +58,11 @@ async def test_malformed_start_payloads(login):
 async def test_clearing_allowlist_resets_option():
     flow = QRLoginOptionsFlow(SimpleNamespace(options={"allowed_client_ids": ["https://home.test/"]}))
     flow.async_create_entry = Mock(return_value={})
-    await flow.async_step_main({"enabled_channels": ["qr"]})
+    validated = flow._main_schema(flow._options)({
+        "channels": {"enabled_channels": ["qr"]}, "recaptcha": {},
+        "rate_limiting": {}, "notifications": {},
+    })
+    await flow.async_step_main(validated)
     assert flow.async_create_entry.call_args.kwargs["data"]["allowed_client_ids"] == []
 
 def test_only_public_polling_views_allow_cors():

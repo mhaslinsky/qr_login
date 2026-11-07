@@ -161,7 +161,9 @@ class QRLoginOptionsFlow(config_entries.OptionsFlow):
             {
                 vol.Optional(
                     CONF_ALLOWED_CLIENT_IDS,
-                    default=options.get(CONF_ALLOWED_CLIENT_IDS, []),
+                    description={
+                        "suggested_value": options.get(CONF_ALLOWED_CLIENT_IDS, [])
+                    },
                 ): TextSelector(TextSelectorConfig(multiple=True)),
                 vol.Required("channels"): section(
                     vol.Schema(

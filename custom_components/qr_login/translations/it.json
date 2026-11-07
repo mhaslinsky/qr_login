@@ -64,6 +64,9 @@
         },
         "data": {
           "allowed_client_ids": "ID client consentiti"
+        },
+        "data_description": {
+          "allowed_client_ids": "Inserisci ogni ID esatto, inclusa la barra finale."
         }
       },
       "mappings": {

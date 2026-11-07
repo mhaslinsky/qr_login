@@ -64,6 +64,9 @@
         },
         "data": {
           "allowed_client_ids": "Allowed client IDs"
+        },
+        "data_description": {
+          "allowed_client_ids": "Match each client ID exactly, including the trailing slash."
         }
       },
       "mappings": {
