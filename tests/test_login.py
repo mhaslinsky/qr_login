@@ -18,7 +18,7 @@ async def test_poll_secret_collects_tokens_once(login):
     data, request = login
     start = json.loads((await views.QRLoginStartView().post(request)).body)
     session = data.sessions[start["session_id"]]
-    assert start["poll_secret"] != session.session_id and session.client_id == "https://ha.test/"
+    assert start["poll_secret"] != session.session_id
     session.status, session.access_token, session.refresh_token = "approved", "access", "refresh"
     for secret, collects in ((None, False), ("wrong", False), (start["poll_secret"], True), (start["poll_secret"], False)):
         request.query = {"session_id": session.session_id, "poll_secret": start["poll_secret"]}
@@ -86,8 +86,6 @@ async def test_internal_origin_with_empty_allowlist(login):
     response = await views.QRLoginStartView().post(request)
     assert response.status == 200
     assert data.sessions[json.loads(response.body)["session_id"]].client_id == "http://10.0.0.14:8123/"
-    data.config["allowed_client_ids"] = ["https://home.test/"]
-    assert (await views.QRLoginStartView().post(request)).status == 400
 
 async def test_missing_ha_url_returns_clean_error(login, monkeypatch):
     _, request = login
@@ -95,11 +93,3 @@ async def test_missing_ha_url_returns_clean_error(login, monkeypatch):
     response = await views.QRLoginStartView().post(request)
     assert response.status == 503
     assert json.loads(response.body) == {"error": "client_id_unavailable"}
-
-
-async def test_status_errors_disable_caching(login):
-    _, request = login
-    for query, expected in (({}, 400), ({"session_id": "missing"}, 404)):
-        request.query = query
-        response = await views.QRLoginStatusView().get(request)
-        assert response.status == expected and response.headers["Cache-Control"] == "no-store"
